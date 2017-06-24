@@ -9,6 +9,7 @@ from webcolors import name_to_rgb as rgb
 
 from settings import *
 from sprites.Player import Player
+from sprites.Platform import Platform
 
 
 class Game(object):
@@ -28,8 +29,13 @@ class Game(object):
         ''' start up a brand new game '''
         # Create group and sprites
         self.all_sprites = pg.sprite.Group()
-        self.player = Player()
+        self.platforms = pg.sprite.Group()
+        self.player = Player(self)
         self.all_sprites.add(self.player)
+        for platform in PLATFORM_LIST:
+            p = Platform(*platform)
+            self.platforms.add(p)
+            self.all_sprites.add(p)
 
         # Play background music and let's get started !
         # pg.mixer.music.play(loops=-1)
@@ -50,10 +56,55 @@ class Game(object):
         ''' draw objects on screen '''
         self.screen.fill((0, 0, 0))
         self.all_sprites.draw(self.screen)
-        self._detect_collisions()
+
+        # debug information
+        Game.draw_text(
+            self.screen,
+            "Velocity = ({}, {})".format(
+                round(self.player.velocity.x),
+                round(self.player.velocity.y)
+            ),
+            20,
+            (90, 10)
+        )
+
+        Game.draw_text(
+            self.screen,
+            "Acceleration = ({}, {})".format(
+                round(self.player.acceleration.x),
+                round(self.player.acceleration.y)
+            ),
+            20,
+            (90, 40)
+        )
+
+        Game.draw_text(
+            self.screen,
+            "collide = " + str(len(pg.sprite.spritecollide(
+                self.player,
+                self.platforms,
+                False))),
+            20,
+            (90, 70)
+        )
+
+        # after drawing everything, flip
+        pg.display.flip()
 
     def _detect_collisions(self):
-        pass
+        self._player_with_platform_collision()
+
+    def _player_with_platform_collision(self):
+        hits = pg.sprite.spritecollide(
+            self.player,
+            self.platforms,
+            dokill=False
+        )
+        # check if player hits a platform - only going downward
+        if self.player.velocity.y > 0:
+            if hits:
+                self.player.position.y = hits[0].rect.top + 1
+                self.player.velocity.y = 0
 
     def events(self):
         ''' manage events/interactions with users '''
@@ -61,11 +112,14 @@ class Game(object):
             if event.type == pg.QUIT:
                 self.playing = False
                 self.running = False
+            if event.type == pg.KEYDOWN:
+                if event.key == pg.K_SPACE:
+                    self.player.jump()
 
     def update(self):
         ''' update screen after drawing and checking events '''
         self.all_sprites.update()
-        pg.display.flip()
+        self._detect_collisions()
 
     def show_title(self):
         pass
@@ -92,7 +146,6 @@ class Game(object):
         #)
         #pg.mixer.music.set_volume(0.4)
         pass
-
 
     @staticmethod
     def draw_text(surface, text, size, pos):

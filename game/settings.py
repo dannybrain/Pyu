@@ -22,5 +22,12 @@ HEIGHT = 600
 
 # GAME
 TITLE = "PYU"
-VELOCITY_MAX = 7.0
-ACCELERATION_MAX = 2.5
+PLAYER_FRICTION = -0.05
+PLAYER_ACCEL = 0.5
+PLAYER_GRAVITY = 0.8
+PLATFORM_LIST = [(300, 400, 150, 20),
+                 (400, 300, 50, 20),
+                 (200, 500, 50, 20),
+                 (400, 500, 50, 20),
+                 (600, 220, 100, 20),
+                 (0, HEIGHT - 80, WIDTH, 40)]
