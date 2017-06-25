@@ -23,10 +23,10 @@ class Player(pg.sprite.Sprite):
         # jump only if staying on top of a platform
         hits = pg.sprite.spritecollide(self, self.game.platforms, False)
         if hits:
-            self.velocity.y = -10
+            self.velocity.y = PLAYER_JMP_FORCE
 
     def update(self):
-        self.acceleration = vec(0, 0.5)
+        self.acceleration = vec(0, PLAYER_GRAVITY)
 
         keys = pg.key.get_pressed()
         if keys[pg.K_LEFT]:
@@ -41,11 +41,9 @@ class Player(pg.sprite.Sprite):
         self.position += self.velocity + 0.5 * self.acceleration
 
         # check edges
-        if self.position.x + self.rect.width / 2 > WIDTH:
+        if self.position.x > WIDTH:
+            self.position.x = 0
+        elif self.position.x <= 0:
             self.position.x = WIDTH - self.rect.width / 2
-            self.velocity.x = 0
-        elif self.position.x - self.rect.width / 2 < 0:
-            self.position.x = self.rect.width / 2
-            self.velocity.x = 0
 
         self.rect.midbottom = self.position

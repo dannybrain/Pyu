@@ -5,6 +5,7 @@ Inspired by the wonderful KidsCanCode videos on youtube
 '''
 import sys
 import pygame as pg
+import random
 from webcolors import name_to_rgb as rgb
 
 from settings import *
@@ -32,6 +33,7 @@ class Game(object):
         self.platforms = pg.sprite.Group()
         self.player = Player(self)
         self.all_sprites.add(self.player)
+        self.score = 0
         for platform in PLATFORM_LIST:
             p = Platform(*platform)
             self.platforms.add(p)
@@ -50,13 +52,27 @@ class Game(object):
             self.draw()
             self.events()
             self.update()
+
             # Loop condition to end the game
+            # Player is off screen. Then more sprites on screen after
+            # the scroll_window_down anim
+            if self.player.rect.bottom > HEIGHT:
+                # scroll down a bit before dying
+                self._scroll_window_down()
+            if len(self.platforms) == 0:
+                self.playing = False
 
     def draw(self):
         ''' draw objects on screen '''
-        self.screen.fill((0, 0, 0))
+        self.screen.fill(BGCOLOR)
         self.all_sprites.draw(self.screen)
 
+        Game.draw_text(
+            self.screen,
+            "Score = {}".format(self.score),
+            20,
+            (WIDTH / 2, 10)
+        )
         # debug information
         Game.draw_text(
             self.screen,
@@ -80,12 +96,24 @@ class Game(object):
 
         Game.draw_text(
             self.screen,
-            "collide = " + str(len(pg.sprite.spritecollide(
-                self.player,
-                self.platforms,
-                False))),
+            "collide = {}".format(
+                len(pg.sprite.spritecollide(
+                    self.player,
+                    self.platforms,
+                    False))
+            ),
             20,
             (90, 70)
+        )
+
+        Game.draw_text(
+            self.screen,
+            "Player = ({}, {})".format(
+                round(self.player.position.x),
+                round(self.player.position.y)
+            ),
+            20,
+            (90, 90)
         )
 
         # after drawing everything, flip
@@ -106,13 +134,46 @@ class Game(object):
                 self.player.position.y = hits[0].rect.top + 1
                 self.player.velocity.y = 0
 
+    def _scroll_window_down(self):
+        ''' move all sprites down until there is no sprite left '''
+        for sprite in self.all_sprites:
+            sprite.rect.y -= max(self.player.velocity.y, 10)
+            if sprite.rect.bottom <= 0:
+                sprite.kill()
+
+    def _scroll_window_up(self):
+        ''' return true if we have to scroll the window up
+        That happens if the player reaches a certain height '''
+        res = False
+        if self.player.rect.top < HEIGHT / 4:
+            res = True
+            self.player.position.y += abs(self.player.velocity.y)
+            for plat in self.platforms:
+                plat.rect.y += abs(self.player.velocity.y)
+                # kill the platforms that went below a certain point
+                # to keep the size of self.platforms small enough
+                # Also, that gives us points !
+                if plat.rect.top >= HEIGHT:
+                    plat.kill()
+                    self.score += 1
+        return res
+
+    def _spawn_new_platforms(self, n):
+        ''' randomly spawn n new platforms on screen, above HEIGHT / 4 '''
+        while len(self.platforms) <= n:
+            width = random.randrange(50, 100)
+            x = random.randrange(0, WIDTH - width)
+            y = random.randrange(-75, 30)
+            p = Platform(x, y, width, 20)
+            self.all_sprites.add(p)
+            self.platforms.add(p)
+
     def events(self):
         ''' manage events/interactions with users '''
         for event in pg.event.get():
             if event.type == pg.QUIT:
-                self.playing = False
-                self.running = False
-            if event.type == pg.KEYDOWN:
+                self.running = self.playing = False
+            elif event.type == pg.KEYDOWN:
                 if event.key == pg.K_SPACE:
                     self.player.jump()
 
@@ -120,12 +181,47 @@ class Game(object):
         ''' update screen after drawing and checking events '''
         self.all_sprites.update()
         self._detect_collisions()
+        if self._scroll_window_up():
+            self._spawn_new_platforms(12)
 
     def show_title(self):
-        pass
+        self.screen.fill(BGCOLOR)
+        Game.draw_text(self.screen, "Pyu", 80, (WIDTH / 2, HEIGHT / 2))
+        Game.draw_text(self.screen,
+                       "Use Space bar to jump",
+                       40,
+                       (WIDTH / 2, HEIGHT / 2 + 100))
+        Game.draw_text(self.screen,
+                       "Press any key to continue...",
+                       20, (WIDTH / 2, HEIGHT - 20))
+        pg.display.flip()
+        self._wait_keypress()
 
     def show_gameover(self):
-        pass
+        # don't show it if we wanted force quit
+        if not self.running:
+            return
+
+        self.screen.fill(BGCOLOR)
+        Game.draw_text(self.screen, "Game Over", 80, (WIDTH / 2, HEIGHT / 2))
+        Game.draw_text(self.screen,
+                       "Score = {}".format(self.score),
+                       40, (WIDTH / 2, HEIGHT / 2 + 100))
+        Game.draw_text(self.screen,
+                       "Press any key to continue...",
+                       20, (WIDTH / 2, HEIGHT - 20))
+        pg.display.flip()
+        self._wait_keypress()
+
+    def _wait_keypress(self):
+        waiting = True
+        while waiting:
+            for event in pg.event.get():
+                if event.type == pg.QUIT:
+                    waiting = False
+                    self.running = False
+                elif event.type == pg.KEYDOWN:
+                    waiting = False
 
     def _load_gfx(self):
         ''' Load all game graphics '''

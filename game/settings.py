@@ -21,13 +21,19 @@ WIDTH = 800
 HEIGHT = 600
 
 # GAME
+BGCOLOR = (0, 155, 155)
 TITLE = "PYU"
-PLAYER_FRICTION = -0.05
+PLAYER_FRICTION = -0.12
 PLAYER_ACCEL = 0.5
 PLAYER_GRAVITY = 0.8
+PLAYER_JMP_FORCE = -18
 PLATFORM_LIST = [(300, 400, 150, 20),
                  (400, 300, 50, 20),
+                 (150, 100, 200, 20),
+                 (180, 200, 100, 20),
                  (200, 500, 50, 20),
                  (400, 500, 50, 20),
-                 (600, 220, 100, 20),
+                 (600, 500, 50, 20),
+                 (600, 220, 175, 20),
+                 (550, 120, 100, 20),
                  (0, HEIGHT - 80, WIDTH, 40)]
