@@ -11,6 +11,7 @@ from webcolors import name_to_rgb as rgb
 from settings import *
 from sprites.Player import Player
 from sprites.Platform import Platform
+from sprites.Spritesheet import Spritesheet
 
 
 class Game(object):
@@ -20,7 +21,7 @@ class Game(object):
         self.screen = pg.display.set_mode((WIDTH, HEIGHT))
         pg.display.set_caption(TITLE)
         self.clock = pg.time.Clock()
-        # Load graphics and sound
+        # Load graphics, sound and high_score
         self._load_gfx()
         self._load_snd()
         # Running indicates the game is in an active state
@@ -34,8 +35,10 @@ class Game(object):
         self.player = Player(self)
         self.all_sprites.add(self.player)
         self.score = 0
+        self._load_high_score()
+
         for platform in PLATFORM_LIST:
-            p = Platform(*platform)
+            p = Platform(self, *platform)
             self.platforms.add(p)
             self.all_sprites.add(p)
 
@@ -69,7 +72,7 @@ class Game(object):
 
         Game.draw_text(
             self.screen,
-            "Score = {}".format(self.score),
+            "Score = {} / HighScore {}".format(self.score, self.high_score),
             20,
             (WIDTH / 2, 10)
         )
@@ -119,6 +122,58 @@ class Game(object):
         # after drawing everything, flip
         pg.display.flip()
 
+    def events(self):
+        ''' manage events/interactions with users '''
+        for event in pg.event.get():
+            if event.type == pg.QUIT:
+                self.running = self.playing = False
+            elif event.type == pg.KEYDOWN:
+                if event.key == pg.K_SPACE:
+                    self.player.jump()
+
+    def update(self):
+        ''' update screen after drawing and checking events '''
+        self.all_sprites.update()
+        self._detect_collisions()
+        if self._scroll_window_up():
+            self._spawn_new_platforms(12)
+
+    def show_title(self):
+        self.screen.fill(BGCOLOR)
+        Game.draw_text(self.screen, "Pyu", 80, (WIDTH / 2, HEIGHT / 2))
+        Game.draw_text(self.screen,
+                       "Use Space bar to jump",
+                       40,
+                       (WIDTH / 2, HEIGHT / 2 + 100))
+        Game.draw_text(self.screen,
+                       "Press any key to continue...",
+                       20, (WIDTH / 2, HEIGHT - 20))
+        pg.display.flip()
+        self._wait_keypress()
+
+    def show_gameover(self):
+        # don't show it if we wanted force quit
+        if not self.running:
+            return
+
+        self.screen.fill(BGCOLOR)
+        if self.score > self.high_score:
+            self._write_new_high_score(self.score)
+            Game.draw_text(self.screen,
+                           "New high score !!!",
+                           80,
+                           (WIDTH / 2, HEIGHT / 4))
+
+        Game.draw_text(self.screen, "Game Over", 80, (WIDTH / 2, HEIGHT / 2))
+        Game.draw_text(self.screen,
+                       "Score = {}".format(self.score),
+                       40, (WIDTH / 2, HEIGHT / 2 + 100))
+        Game.draw_text(self.screen,
+                       "Press any key to continue...",
+                       20, (WIDTH / 2, HEIGHT - 20))
+        pg.display.flip()
+        self._wait_keypress()
+
     def _detect_collisions(self):
         self._player_with_platform_collision()
 
@@ -164,54 +219,9 @@ class Game(object):
             width = random.randrange(50, 100)
             x = random.randrange(0, WIDTH - width)
             y = random.randrange(-75, 30)
-            p = Platform(x, y, width, 20)
+            p = Platform(self, x, y, width, 20)
             self.all_sprites.add(p)
             self.platforms.add(p)
-
-    def events(self):
-        ''' manage events/interactions with users '''
-        for event in pg.event.get():
-            if event.type == pg.QUIT:
-                self.running = self.playing = False
-            elif event.type == pg.KEYDOWN:
-                if event.key == pg.K_SPACE:
-                    self.player.jump()
-
-    def update(self):
-        ''' update screen after drawing and checking events '''
-        self.all_sprites.update()
-        self._detect_collisions()
-        if self._scroll_window_up():
-            self._spawn_new_platforms(12)
-
-    def show_title(self):
-        self.screen.fill(BGCOLOR)
-        Game.draw_text(self.screen, "Pyu", 80, (WIDTH / 2, HEIGHT / 2))
-        Game.draw_text(self.screen,
-                       "Use Space bar to jump",
-                       40,
-                       (WIDTH / 2, HEIGHT / 2 + 100))
-        Game.draw_text(self.screen,
-                       "Press any key to continue...",
-                       20, (WIDTH / 2, HEIGHT - 20))
-        pg.display.flip()
-        self._wait_keypress()
-
-    def show_gameover(self):
-        # don't show it if we wanted force quit
-        if not self.running:
-            return
-
-        self.screen.fill(BGCOLOR)
-        Game.draw_text(self.screen, "Game Over", 80, (WIDTH / 2, HEIGHT / 2))
-        Game.draw_text(self.screen,
-                       "Score = {}".format(self.score),
-                       40, (WIDTH / 2, HEIGHT / 2 + 100))
-        Game.draw_text(self.screen,
-                       "Press any key to continue...",
-                       20, (WIDTH / 2, HEIGHT - 20))
-        pg.display.flip()
-        self._wait_keypress()
 
     def _wait_keypress(self):
         waiting = True
@@ -225,11 +235,9 @@ class Game(object):
 
     def _load_gfx(self):
         ''' Load all game graphics '''
-        # self.background = pg.image.load(
-        #    os.path.join(IMG_PATH, 'Background/space_background.png')
-        # ).convert()
-        # self.background_rect = self.background.get_rect()
-        pass
+        self.spritesheet = Spritesheet(
+            os.path.join(IMG_PATH, SPRITESHEET_FILE)
+        )
 
     def _load_snd(self):
         # Load all sounds
@@ -242,6 +250,27 @@ class Game(object):
         #)
         #pg.mixer.music.set_volume(0.4)
         pass
+
+    def _write_new_high_score(self, newscore):
+        # write high score in file
+        with open(os.path.join(FILE_PATH, 'highscore.dat'), 'w') as f:
+            try:
+                f.write('{}{}'.format(newscore, '\n'))
+            except IOError:
+                print("Can't write to highscore file !!!")
+
+    def _load_high_score(self):
+        # open and read high_score
+        try:
+            with open(os.path.join(FILE_PATH, 'highscore.dat'), 'r') as f:
+                try:
+                    highscore_in_file = int(f.read())
+                    self.high_score = highscore_in_file
+                except IOError:
+                    print("I/O error")
+                    self.high_score = 0
+        except FileNotFoundError:
+            self.high_score = 0
 
     @staticmethod
     def draw_text(surface, text, size, pos):

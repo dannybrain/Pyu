@@ -14,6 +14,7 @@ FPS = 60
 FILE_PATH = os.path.dirname('__file__')
 IMG_PATH = os.path.join(FILE_PATH, 'img')
 SND_PATH = os.path.join(FILE_PATH, 'snd')
+SPRITESHEET_FILE = 'spritesheet_jumper.png'
 # FONT_NAME = pg.font.match_font('arial')
 
 # WINDOW

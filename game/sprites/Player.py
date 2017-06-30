@@ -1,5 +1,4 @@
 import pygame as pg
-from webcolors import name_to_rgb as rgb
 
 from settings import *
 
@@ -11,8 +10,15 @@ class Player(pg.sprite.Sprite):
     def __init__(self, game):
         pg.sprite.Sprite.__init__(self)
         self.game = game
-        self.image = pg.Surface((40, 30))
-        self.image.fill(rgb('yellow'))
+        self.image = game.spritesheet.get_image(
+            x=690,
+            y=406,
+            width=120,
+            height=201
+        )
+        self.image = pg.transform.scale(self.image, (40, 66))
+        self.image.set_colorkey((0, 0, 0))
+
         self.rect = self.image.get_rect()
         self.rect.center = (WIDTH / 2, HEIGHT / 2)
         self.position = vec(WIDTH / 2, HEIGHT / 2)
