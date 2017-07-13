@@ -42,14 +42,14 @@ class Game(object):
             self.platforms.add(p)
             self.all_sprites.add(p)
 
-        # Play background music and let's get started !
-        # pg.mixer.music.play(loops=-1)
         self.run()
 
     def run(self):
         ''' main game loop after initialization '''
         # Playing indicates the game has actually started
         self.playing = True
+        # Play background music and let's get started !
+        pg.mixer.music.play(loops=-1)
         while self.playing:
             self.clock.tick(FPS)
             self.draw()
@@ -64,6 +64,7 @@ class Game(object):
                 self._scroll_window_down()
             if len(self.platforms) == 0:
                 self.playing = False
+        pg.mixer.music.fadeout(500)
 
     def draw(self):
         ''' draw objects on screen '''
@@ -267,15 +268,14 @@ class Game(object):
 
     def _load_snd(self):
         # Load all sounds
-        #self.laser_snd = pg.mixer.Sound(
-        #    os.path.join(SND_PATH, 'laser.wav')
-        #)
+        self.jump_snd = pg.mixer.Sound(
+            os.path.join(SND_PATH, 'jump.wav')
+        )
         # Load background music
-        #pg.mixer.music.load(
-        #    os.path.join(SND_PATH, 'background.ogg')
-        #)
-        #pg.mixer.music.set_volume(0.4)
-        pass
+        pg.mixer.music.load(
+            os.path.join(SND_PATH, 'background.mp3')
+        )
+        pg.mixer.music.set_volume(0.4)
 
     def _write_new_high_score(self, newscore):
         # write high score in file

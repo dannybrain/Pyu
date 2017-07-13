@@ -103,10 +103,11 @@ class Player(pg.sprite.Sprite):
         if hits and not self.jumping:
             self.velocity.y = PLAYER_JMP_FORCE
             self.jumping = True
+            self.game.jump_snd.play()
 
     def update(self):
         self.acceleration = vec(0, PLAYER_GRAVITY)
-        # animate character based on its state
+        # animate character based on its stat()
         self._animate()
 
         keys = pg.key.get_pressed()
