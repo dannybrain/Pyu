@@ -1,17 +1,14 @@
 import pygame as pg
+from random import choice
 
 
 class Platform(pg.sprite.Sprite):
     def __init__(self, game, x, y, width, height):
         pg.sprite.Sprite.__init__(self)
         self.game = game
-        self.image = game.spritesheet.get_image(
-            x=0,
-            y=96,
-            width=380,
-            height=94
-        )
-        self.image = pg.transform.scale(self.image, (95, 23))
+        self.images = [game.spritesheet.get_image(213, 1662, 201, 100),
+                       game.spritesheet.get_image(0, 288, 380, 94)]
+        self.image = choice(self.images)
         self.image.set_colorkey((0, 0, 0))
         self.rect = self.image.get_rect()
         self.rect.x = x

@@ -69,6 +69,8 @@ class Game(object):
         ''' draw objects on screen '''
         self.screen.fill(BGCOLOR)
         self.all_sprites.draw(self.screen)
+        # player always on the front
+        self.screen.blit(self.player.image, self.player.rect)
 
         Game.draw_text(
             self.screen,
@@ -130,13 +132,16 @@ class Game(object):
             elif event.type == pg.KEYDOWN:
                 if event.key == pg.K_SPACE:
                     self.player.jump()
+            elif event.type == pg.KEYUP:
+                if event.key == pg.K_SPACE:
+                    self.player.jump_cut()
 
     def update(self):
         ''' update screen after drawing and checking events '''
         self.all_sprites.update()
         self._detect_collisions()
         if self._scroll_window_up():
-            self._spawn_new_platforms(12)
+            self._spawn_new_platforms(8)
 
     def show_title(self):
         self.screen.fill(BGCOLOR)
@@ -177,6 +182,10 @@ class Game(object):
     def _detect_collisions(self):
         self._player_with_platform_collision()
 
+    def _platform_with_platform_collision(self, platform):
+        hits = pg.sprite.spritecollide(platform, self.platforms, dokill=False)
+        return len(hits) > 0
+
     def _player_with_platform_collision(self):
         hits = pg.sprite.spritecollide(
             self.player,
@@ -186,8 +195,18 @@ class Game(object):
         # check if player hits a platform - only going downward
         if self.player.velocity.y > 0:
             if hits:
-                self.player.position.y = hits[0].rect.top + 1
-                self.player.velocity.y = 0
+                # find the lowest one
+                lowest = hits[0]
+                for hit in hits:
+                    if hit.rect.bottom > lowest.rect.bottom:
+                        lowest = hit
+
+                # only move player at the top of the platform if
+                # it's half way through the top
+                if self.player.position.y < lowest.rect.centery:
+                    self.player.position.y = lowest.rect.top + 1
+                    self.player.velocity.y = 0
+                    self.player.jumping = False
 
     def _scroll_window_down(self):
         ''' move all sprites down until there is no sprite left '''
@@ -202,9 +221,11 @@ class Game(object):
         res = False
         if self.player.rect.top < HEIGHT / 4:
             res = True
-            self.player.position.y += abs(self.player.velocity.y)
+            # move the screen up based on its velocity...if character is
+            # on a platform, move up to 2 to make some neat room at the top
+            self.player.position.y += max(abs(self.player.velocity.y), 2)
             for plat in self.platforms:
-                plat.rect.y += abs(self.player.velocity.y)
+                plat.rect.y += max(abs(self.player.velocity.y), 2)
                 # kill the platforms that went below a certain point
                 # to keep the size of self.platforms small enough
                 # Also, that gives us points !
@@ -220,6 +241,11 @@ class Game(object):
             x = random.randrange(0, WIDTH - width)
             y = random.randrange(-75, 30)
             p = Platform(self, x, y, width, 20)
+            # do not create a platform if it collides with another one
+            if self._platform_with_platform_collision(p):
+                del(p)
+                continue
+
             self.all_sprites.add(p)
             self.platforms.add(p)
 

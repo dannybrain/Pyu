@@ -11,4 +11,5 @@ class Spritesheet():
         image.blit(self.image,
                    (0, 0),
                    (x, y, width, height))
+        image = pg.transform.scale(image, (width // 2, height // 2))
         return image
