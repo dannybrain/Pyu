@@ -12,6 +12,7 @@ from settings import *
 from sprites.Player import Player
 from sprites.Platform import Platform
 from sprites.Spritesheet import Spritesheet
+from sprites.Pow import Pow
 
 
 class Game(object):
@@ -32,15 +33,13 @@ class Game(object):
         # Create group and sprites
         self.all_sprites = pg.sprite.Group()
         self.platforms = pg.sprite.Group()
+        self.powerups = pg.sprite.Group()
         self.player = Player(self)
-        self.all_sprites.add(self.player)
         self.score = 0
         self._load_high_score()
 
         for platform in PLATFORM_LIST:
-            p = Platform(self, *platform)
-            self.platforms.add(p)
-            self.all_sprites.add(p)
+            Platform(self, *platform)
 
         self.run()
 
@@ -182,6 +181,17 @@ class Game(object):
 
     def _detect_collisions(self):
         self._player_with_platform_collision()
+        self._player_with_powerup_collision()
+
+    def _player_with_powerup_collision(self):
+        hits = pg.sprite.spritecollide(
+            self.player,
+            self.powerups,
+            dokill=False
+        )
+        if hits:
+            self.player.velocity.y = POWER_UP_JMP_FORCE
+            self.powerup_snd.play()
 
     def _platform_with_platform_collision(self, platform):
         hits = pg.sprite.spritecollide(platform, self.platforms, dokill=False)
@@ -203,11 +213,15 @@ class Game(object):
                         lowest = hit
 
                 # only move player at the top of the platform if
-                # it's half way through the top
-                if self.player.position.y < lowest.rect.centery:
-                    self.player.position.y = lowest.rect.top + 1
-                    self.player.velocity.y = 0
-                    self.player.jumping = False
+                # it's half way through the top. Also, we do not
+                # want the character to collide if its feet arent
+                # on the platform anymore
+                if self.player.position.x > lowest.rect.left - 10 and \
+                   self.player.position.x < lowest.rect.right + 10:
+                    if self.player.position.y < lowest.rect.centery:
+                        self.player.position.y = lowest.rect.top + 1
+                        self.player.velocity.y = 0
+                        self.player.jumping = False
 
     def _scroll_window_down(self):
         ''' move all sprites down until there is no sprite left '''
@@ -242,13 +256,14 @@ class Game(object):
             x = random.randrange(0, WIDTH - width)
             y = random.randrange(-75, 30)
             p = Platform(self, x, y, width, 20)
+            # randomly add powerups on top of platforms
+            if random.randint(0, 100) <= POWER_UP_PCT:
+                Pow(self, p)
+
             # do not create a platform if it collides with another one
             if self._platform_with_platform_collision(p):
                 del(p)
                 continue
-
-            self.all_sprites.add(p)
-            self.platforms.add(p)
 
     def _wait_keypress(self):
         waiting = True
@@ -270,6 +285,9 @@ class Game(object):
         # Load all sounds
         self.jump_snd = pg.mixer.Sound(
             os.path.join(SND_PATH, 'jump.wav')
+        )
+        self.powerup_snd = pg.mixer.Sound(
+            os.path.join(SND_PATH, 'powerup.wav')
         )
         # Load background music
         pg.mixer.music.load(

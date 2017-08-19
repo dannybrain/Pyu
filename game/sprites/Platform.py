@@ -4,7 +4,8 @@ from random import choice
 
 class Platform(pg.sprite.Sprite):
     def __init__(self, game, x, y, width, height):
-        pg.sprite.Sprite.__init__(self)
+        self.groups = game.all_sprites, game.platforms
+        pg.sprite.Sprite.__init__(self, self.groups)
         self.game = game
         self.images = [game.spritesheet.get_image(213, 1662, 201, 100),
                        game.spritesheet.get_image(0, 288, 380, 94)]
